@@ -3,7 +3,7 @@ package evaluation
 
 import alpine.ast
 import alpine.symbols
-import alpine.symbols.{Entity, EntityReference, Type}
+import alpine.symbols.{Entity, EntityReference, Type, Name}
 import alpine.util.FatalError
 
 import java.io.OutputStream
@@ -12,6 +12,11 @@ import java.nio.charset.StandardCharsets.UTF_8
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.util.control.NoStackTrace
+import alpine.ast.Expression
+import alpine.ast.TreeVisitor
+import alpine.symbols.Type.Record
+import alpine.symbols.Type.Labeled
+import alpine.ast.Typecast
 
 /** The evaluation of an Alpine program.
  *
@@ -82,7 +87,10 @@ final class Interpreter(
     Value.Builtin(n.value, Type.String)
 
   def visitRecord(n: ast.Record)(using context: Context): Value =
-    ???
+    n.tpe match {
+      case tpe: Type.Record => Value.Record(n.identifier, n.fields.map(_.value.visit(this)), tpe)
+      case _ => unexpectedVisit(n)
+    }
 
   def visitSelection(n: ast.Selection)(using context: Context): Value =
     n.qualification.visit(this) match
@@ -95,35 +103,75 @@ final class Interpreter(
         throw Panic(s"unexpected qualification of type '${q.dynamicType}'")
 
   def visitApplication(n: ast.Application)(using context: Context): Value =
-    ???
+    val function = n.function.visit(this)
+    val arguments = n.arguments.map(_.value.visit(this))
+    call(function, arguments)
 
   def visitPrefixApplication(n: ast.PrefixApplication)(using context: Context): Value =
-    ???
+    val function = n.function.visit(this)
+    val argument = n.argument.visit(this)
+    call(function, List(argument))
 
   def visitInfixApplication(n: ast.InfixApplication)(using context: Context): Value =
-    ???
+    val function = n.function.visit(this)
+    val left = n.lhs.visit(this)
+    val right = n.rhs.visit(this)
+    call(function, List(left, right))
 
   def visitConditional(n: ast.Conditional)(using context: Context): Value =
-    ???
+    n.condition.visit(this) match
+      case Value.Builtin(true, Type.Bool) =>  n.successCase.visit(this)
+      case Value.Builtin(false, Type.Bool) =>  n.failureCase.visit(this)
+      case _ => unexpectedVisit(n)
 
   def visitMatch(n: ast.Match)(using context: Context): Value =
-    ???
+    val scrutinee = n.scrutinee.visit(this)
+    // Obtain first case that match. Once found, ignore other cases
+    n.cases.foldLeft(None: Option[Value])(
+      (o, c) => {
+        o match
+          case None =>
+            matches(scrutinee, c.pattern) match
+              case Some(m) =>
+                val newContext = context.pushing(m)
+                Some(c.body.visit(this)(using newContext))
+              case None => None
+          case _ => o
+      }
+    ) match {
+      case Some(v) => v
+      case None => throw Panic(s"'${scrutinee}' does not match any cases!")
+    }
 
   def visitMatchCase(n: ast.Match.Case)(using context: Context): Value =
     unexpectedVisit(n)
 
   def visitLet(n: ast.Let)(using context: Context): Value =
-    ???
+    val newContext = context.defining(
+      n.binding.nameDeclared,
+      n.binding.initializer.map(_.visit(this)) match
+        case Some(v) => v
+        case None => throw Panic(s"Binding ${n.binding.nameDeclared} does not have an initializer!")
+    )
+    n.body.visit(this)(using newContext)
 
   def visitLambda(n: ast.Lambda)(using context: Context): Value =
-    ???
+    Value.Lambda(n.body, n.inputs, context.flattened, n.tpe)
 
   def visitParenthesizedExpression(n: ast.ParenthesizedExpression)(using context: Context): Value =
-    // TODO
-    ???
+    n.inner.visit(this)
 
   def visitAscribedExpression(n: ast.AscribedExpression)(using context: Context): Value =
-    ???
+    val value = n.inner.visit(this)
+    n.operation match {
+      case Typecast.Widen => value
+      case Typecast.NarrowUnconditionally =>
+        if (n.ascription.tpe.isSubtypeOf(value.dynamicType)) value
+        else throw Panic(s"$value is not a subtype of ${n.ascription.tpe}")
+      case Typecast.Narrow =>
+        if (n.ascription.tpe.isSubtypeOf(value.dynamicType)) Value.some(value)
+        else Value.none
+    }
 
   def visitTypeIdentifier(n: ast.TypeIdentifier)(using context: Context): Value =
     unexpectedVisit(n)
@@ -186,10 +234,14 @@ final class Interpreter(
   private def call(f: Value, a: Seq[Value])(using context: Context): Value =
     f match
       case Value.Function(d, _) =>
-        ???
+        val args = d.inputs.map(_.nameDeclared).zip(a)
+        val newContext = context.pushing(args.toMap).defining(Name(None, d.identifier), f)
+        d.body.visit(this)(using newContext)
 
       case l: Value.Lambda =>
-        ???
+        val args = l.inputs.map(_.nameDeclared).zip(a)
+        val newContext = context.pushing(l.captures).pushing(args.toMap)
+        l.body.visit(this)(using newContext)
 
       case Value.BuiltinFunction("exit", _) =>
         val Value.Builtin(status, _) = a.head : @unchecked
@@ -305,13 +357,14 @@ final class Interpreter(
   private def matchesWildcard(
       scrutinee: Value, pattern: ast.Wildcard
   )(using context: Context): Option[Interpreter.Frame] =
-    ???
+    Some(Map())
 
   /** Returns a map from binding in `pattern` to its value iff `scrutinee` matches `pattern`.  */
   private def matchesValue(
       scrutinee: Value, pattern: ast.ValuePattern
   )(using context: Context): Option[Interpreter.Frame] =
-    ???
+    if (scrutinee == pattern.value.visit(this)) Some(Map())
+    else None
 
   /** Returns a map from binding in `pattern` to its value iff `scrutinee` matches `pattern`.  */
   private def matchesRecord(
@@ -320,7 +373,19 @@ final class Interpreter(
     import Interpreter.Frame
     scrutinee match
       case s: Value.Record =>
-        ???
+        pattern.tpe match
+          case p: Type.Record if (s.dynamicType.structurallyMatches(p)) =>
+            val values = s.fields.zip(pattern.fields.map(_.value))
+            val allValuesMatch = values.foldLeft(true, Map(): Frame)((acc, v) =>
+              matches(v._1, v._2) match
+                case Some(f) => (acc._1, acc._2 ++ f)
+                case None => (false, acc._2)
+            )
+
+            if (allValuesMatch._1) Some(allValuesMatch._2)
+            else None
+          case _ =>
+            None
       case _ =>
         None
 
@@ -328,7 +393,9 @@ final class Interpreter(
   private def matchesBinding(
       scrutinee: Value, pattern: ast.Binding
   )(using context: Context): Option[Interpreter.Frame] =
-    ???
+    pattern.ascription match
+      case Some(ascription) if (scrutinee.dynamicType != ascription.tpe) => None
+      case _ => Some(Map(pattern.nameDeclared -> scrutinee))
 
 end Interpreter
 
