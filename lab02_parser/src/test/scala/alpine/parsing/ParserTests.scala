@@ -288,8 +288,8 @@ class ParserTests extends munit.FunSuite:
       case InfixApplication(Identifier("+", _), AscribedExpression(IntegerLiteral("1", _), Typecast.Widen, TypeIdentifier("Int", _), _), IntegerLiteral("2", _), _) => ()
       case x => fail(f"Expected a correct binary operation, got $x.")
   }
-  
-  // Labeled 
+
+  // Labeled
   test("`labeled` works with expressions and a label (1pt)") {
     val p = instrumentParser("label: 1", 0)
     p.labeled(p.expression) match
@@ -382,7 +382,7 @@ class ParserTests extends munit.FunSuite:
       case List() => ()
       case x => fail(f"Expected a correct parenthesized labeled list, got $x.")
   }
-    
+
   // Types
   test("`tpe` works with a single type identifier (1pt)") {
     val p = instrumentParser("Int", 0)
