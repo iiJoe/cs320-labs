@@ -141,8 +141,43 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns an infix expression. */
   private[parsing] def infixExpression(precedence: Int = ast.OperatorPrecedence.min): Expression =
-    // TODO https://en.wikipedia.org/wiki/Operator-precedence_parser#Precedence_climbing_method
-    ???
+    val start = lastBoundary
+    infixRecur(ascribed(), start, precedence)
+
+  private def infixRecur(lhs: Expression, start: Int, precedence: Int): Expression =
+    peek.filter(K.Operator.matches) match {
+      case Some(_) =>
+        operatorIdentifier() match {
+          case (Some(op), p1) if (op.precedence >= precedence) =>
+            val opIden = Identifier(p1.text.toString, p1)
+            val rhs = primaryExpression()
+
+            val exp = InfixApplication(opIden, lhs, rhs, source.span(start, lastBoundary))
+            peek.filter(K.Operator.matches) match {
+              case Some(_) =>
+                val snap = snapshot()
+                operatorIdentifier() match {
+                  case (Some(nextOp), p2) =>
+                    if (nextOp.precedence > op.precedence)
+                      restore(snap)
+                      val r = infixRecur(rhs, rhs.site.start, op.precedence + 1)
+                      InfixApplication(opIden, lhs, r, source.span(start, lastBoundary))
+                    else
+                      restore(snap)
+                      infixRecur(exp, start, precedence)
+                  case _ => InfixApplication(opIden, lhs, rhs, source.span(start, lastBoundary))
+                }
+
+              case None => exp
+            }
+
+          case _ =>
+            lhs
+        }
+      case None =>
+        lhs
+    }
+
 
   /** Parses and returns an expression with an optional ascription. */
   private[parsing] def ascribed(): Expression =
