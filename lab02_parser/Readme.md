@@ -77,15 +77,16 @@ Let's recall the global idea of a simple compiler's pipeline:
 Source code -> Lexer -> Parser -> Type checking -> Assembly generation
 ```
 
-The lexer will generate a sequence of tokens from the source code. The parser will generate an AST from the sequence of tokens.
+The lexer generates a sequence of tokens from the source code.
+The parser generates an AST from the sequence of tokens.
 
-Let consider an example:
+For example, consider the following program:
 
 ```swift
 let main = exit(1)
 ```
 
-The lexer will generate the following sequence of tokens:
+The lexer generates the following sequence of tokens:
 
 ```scala
 List(
@@ -99,9 +100,10 @@ List(
 )
 ```
 
-`Let`, `Identifier`, `Eq`, `LParen`, `Integer`, `RParen` are tokens. The first element of each tuple is the position of the token in the source code.
+`Let`, `Identifier`, `Eq`, `LParen`, `Integer`, `RParen` are tokens.
+The number in parentheses denote the positions in the source text from which the token has been parsed, as 0-based indices in an array of code points.
 
-The parser will generate the following AST:
+Given this token stream, the parser generates the following AST:
 
 ```scala
 List(
@@ -130,11 +132,9 @@ The AST is more expressive than the sequence of tokens as it represents the stru
 
 ## General structure of the parser and the codebase
 
-The parser consummes a sequence of tokens as a stream to produce an AST.
-
-The parsing is composed of multiple functions. Each function is responsible for parsing a specific part of the grammar. For example, the `binding` function is responsible for parsing a binding.
-
-Here is the available API to implement the parser:
+Parsing is decomposed into multiple functions, each of them responsible for parsing a specific part of the grammar.
+For example, the method `binding` is responsible for parsing binding trees, like the one shown in the previous section.
+All of these parsing functions use the following core API:
 
 * `peek`: looks at the next token without consuming it.
   * it returns either `Some(token)` or `None` if the stream is empty (i.e. we reach an EOF).
@@ -147,7 +147,10 @@ Here is the available API to implement the parser:
 * `expect(construct: String, pred: Token => Boolean)`: same as `expect` but takes a construct to include in the error message.
 * `report`: reports an error while parsing.
 * `snapshot`: returns the current state of the parser
-* `restore` : restores the state of the parser from a backup returned by `backup`
+* `restore` : restores the state of the parser from a backup returned by `snapshot`
+
+Observer how these methods are used in the parts of the code that have been provided to get a sense of how they can be used.
+In particular, pay attention to the way `peek` and `take` (and its variants) are used.
 
 ### New elements of the language
 
@@ -188,7 +191,7 @@ For reference, the grammar is provided inside the [`grammar.md`](./grammar.md)/[
 
 The parser is written in composing functions, that each parses a part of the grammar.
 
-For example, let's have a look at the `primarayExpression()` function. This function `peek` at the next token, and depending on its nature, calls the appropriate function to parse the corresponding producing rule of the grammar.
+For example, let's have a look at the `primaryExpression()` function. This function `peek` at the next token, and depending on its nature, calls the appropriate function to parse the corresponding producing rule of the grammar.
 
 <div class='snippet'>
 
@@ -264,7 +267,7 @@ If there is a whitespace, then it returns directly the operator (recall: it's an
 
 In the case where it is not an operator, it will parse the compound expression (so call the `compoundExpression()` function.)
 
-##### `ascribedExpression()`
+##### `ascribed()`
 
 An ascribed expression is a prefix expression followed by an optional type cast. It returns a `AscribedExpression` AST node if there is a type cast, otherwise just a prefix expression. You can use the `typecast` function.
 
@@ -280,7 +283,7 @@ As we saw in the lecture, parsing expressions requires care because of the ambig
 
 Notice that infixEpression takes a precendence as input: you may use it this parameter to factor out the parsing of all possible infix expressions with different precedence levels.
 
-You may take inspiration from the precedence climbing algorithm to parse infix expressions. See [the Wikipedia article]("https://en.wikipedia.org/wiki/Operator-precedence_parser#Precedence_climbing_method") for more information.
+You may take inspiration from the precedence climbing algorithm to parse infix expressions. See [the Wikipedia article](https://en.wikipedia.org/wiki/Operator-precedence_parser#Precedence_climbing_method) for more information.
 
 ##### Literals
 
@@ -295,7 +298,7 @@ In _Alpine_, a `Labeled[T]` can be:
 * `<value>`
 * `<label>: <value>`
 
-_Hint_: you may find the `backup` and `restore` methods useful.
+_Hint_: you may find the `snapshot` and `restore` methods useful.
 
 _Note_: as stated in the grammar, a `<label>` can be an `<identifier>` or a `<keyword>`.
 
@@ -463,12 +466,12 @@ It should parse both cases:
 and
 
 ```
-(<value parameter list>) -> [type] { <expression> }
+(<value parameter list>) [-> type] { <expression> }
 ```
 
-where `[type]` is optional.
+where `[-> type]` is optional.
 
-_Hint_: `backup` and `restore` may come handy.
+_Hint_: `snapshot` and `restore` may come handy.
 
 ##### Match expressions
 
