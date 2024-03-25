@@ -103,16 +103,21 @@ class Parser(val source: SourceFile):
     val start = lastBoundary
     val label = take(K.Underscore) match {
       case Some(_) => None
-      case None => take().map(_.site.text.toString)
+      case None => take()
     }
-    val iden = identifier()
+
+    val iden = peek.filter(K.Identifier.matches) match {
+      case Some(i) => identifier()
+      case _ => Identifier(label.map(_.site.text.toString).getOrElse(""), label.map(_.site).getOrElse(source.span(start, lastBoundary)))
+    }
+
     val ascription = take(K.Colon) match {
       case Some(_) => Some(tpe())
       case None => None
     }
     val end = lastBoundary
 
-    Parameter(label, iden.value, ascription, source.span(start, end))
+    Parameter(label.map(_.site.text.toString), iden.value, ascription, source.span(start, end))
 
   private def functionBody(): Expression =
     inBraces(expression)
@@ -145,7 +150,7 @@ class Parser(val source: SourceFile):
     infixRecur(ascribed(), start, precedence)
 
   private def infixRecur(lhs: Expression, start: Int, precedence: Int): Expression =
-    peek.filter(K.Operator.matches) match {
+    peek.filter(p => K.Operator.matches(p) || K.Eq.matches(p)) match {
       case Some(_) =>
         operatorIdentifier() match {
           case (Some(op), p1) if (op.precedence >= precedence) =>
@@ -305,13 +310,13 @@ class Parser(val source: SourceFile):
   private[parsing] def conditional(): Expression =
     val start = lastBoundary
     val s = expect(K.If)
-    val condition = primaryExpression()
+    val condition = expression()
 
     val t = expect(K.Then)
-    val successCase = primaryExpression()
+    val successCase = expression()
 
     val u = expect(K.Else)
-    val failureCase = primaryExpression()
+    val failureCase = expression()
     val end = lastBoundary
 
     Conditional(condition, successCase, failureCase, source.span(start, end))
@@ -357,24 +362,23 @@ class Parser(val source: SourceFile):
   private[parsing] def let(): Let =
     val start = lastBoundary
     val bind = binding()
-    val body = inBraces(primaryExpression)
+    val body = inBraces(expression)
     Let(bind, body, source.span(start, lastBoundary))
 
   /** Parses and returns a lambda or parenthesized term-level expression. */
   private def lambdaOrParenthesizedExpression(): Expression =
     val start = lastBoundary
     val snap = snapshot()
-    val exp = inParentheses(primaryExpression)
+    val exp = inParentheses(expression)
     val typeOpt = take(K.Arrow).map((_) => tpe())
     if (peek.exists(K.LBrace.matches)) {
       restore(snap)
       val inputs = valueParameterList()
       val output = take(K.Arrow).map((_) => tpe())
-      val body = inBraces(primaryExpression)
+      val body = inBraces(expression)
       Lambda(inputs, output, body, source.span(start, lastBoundary))
     }
     else ParenthesizedExpression(exp, source.span(start, lastBoundary))
-
 
 
   /** Parses and returns an operator. */
