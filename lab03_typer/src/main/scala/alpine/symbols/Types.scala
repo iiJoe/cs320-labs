@@ -442,10 +442,10 @@ object Type:
 
   /** Returns the `#none` case of an option. */
   def none: Record =
-    Record("none", List())
+    Record("#none", List())
 
   /** Returns the `#some` case of an option wrapping instances of `t`. */
   def some(t: Type): Record =
-    Record("some", List(Labeled(None, t)))
+    Record("#some", List(Labeled(None, t)))
 
 end Type

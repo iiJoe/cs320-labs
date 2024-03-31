@@ -155,7 +155,7 @@ class Parser(val source: SourceFile):
         operatorIdentifier() match {
           case (Some(op), p1) if (op.precedence >= precedence) =>
             val opIden = Identifier(p1.text.toString, p1)
-            val rhs = primaryExpression()
+            val rhs = ascribed()
 
             val exp = InfixApplication(opIden, lhs, rhs, source.span(start, lastBoundary))
             peek.filter(K.Operator.matches) match {
@@ -190,11 +190,11 @@ class Parser(val source: SourceFile):
     val prefix = prefixExpression()
     typecast() match {
       case Some(Typecast.Widen) =>
-        AscribedExpression(prefix, Typecast.Widen, typeIdentifier(), source.span(start, lastBoundary))
+        AscribedExpression(prefix, Typecast.Widen, tpe(), source.span(start, lastBoundary))
       case Some(Typecast.NarrowUnconditionally) =>
-        AscribedExpression(prefix, Typecast.NarrowUnconditionally, typeIdentifier(), source.span(start, lastBoundary))
+        AscribedExpression(prefix, Typecast.NarrowUnconditionally, tpe(), source.span(start, lastBoundary))
       case Some(Typecast.Narrow) =>
-        AscribedExpression(prefix, Typecast.Narrow, typeIdentifier(), source.span(start, lastBoundary))
+        AscribedExpression(prefix, Typecast.Narrow, tpe(), source.span(start, lastBoundary))
       case None => prefix
     }
 
@@ -224,7 +224,7 @@ class Parser(val source: SourceFile):
 
     take(K.Dot) match {
       case Some(_) =>  {
-        val exp = primaryExpression()
+        val exp = compoundExpression()
         val end = lastBoundary
         exp match {
           case e: Selectee => Selection(qualification, e, source.span(start, end))
@@ -234,7 +234,7 @@ class Parser(val source: SourceFile):
       case None =>
         peek.map(K.LParen.matches) match {
           case Some(true) => {
-            val params = parenthesizedLabeledList(primaryExpression)
+            val params = parenthesizedLabeledList(expression)
             Application(qualification, params, source.span(start, lastBoundary))
           }
           case _ => qualification
@@ -304,7 +304,7 @@ class Parser(val source: SourceFile):
 
   /** Parses and returns the fields of a term-level record expression. */
   private def recordExpressionFields(): List[Labeled[Expression]] =
-    parenthesizedLabeledList(primaryExpression)
+    parenthesizedLabeledList(expression)
 
   /** Parses and returns a conditional expression. */
   private[parsing] def conditional(): Expression =
@@ -370,7 +370,7 @@ class Parser(val source: SourceFile):
     val start = lastBoundary
     val snap = snapshot()
     val exp = inParentheses(expression)
-    val typeOpt = take(K.Arrow).map((_) => tpe())
+
     if (peek.exists(K.LBrace.matches)) {
       restore(snap)
       val inputs = valueParameterList()
@@ -379,7 +379,6 @@ class Parser(val source: SourceFile):
       Lambda(inputs, output, body, source.span(start, lastBoundary))
     }
     else ParenthesizedExpression(exp, source.span(start, lastBoundary))
-
 
   /** Parses and returns an operator. */
   private def operator(): Expression =
@@ -518,7 +517,6 @@ class Parser(val source: SourceFile):
   private[parsing] def arrowOrParenthesizedType(): Type =
     val start = lastBoundary
     val t = typeArguments()
-    if (t.isEmpty) throw FatalError("expected type to be defined", source.span(lastBoundary, lastBoundary))
 
     take(K.Arrow) match {
       case Some(_) =>
@@ -564,7 +562,7 @@ class Parser(val source: SourceFile):
   /** Parses and returns a value pattern. */
   private def valuePattern(): ValuePattern =
     val start = lastBoundary
-    val exp = primaryExpression()
+    val exp = expression()
     ValuePattern(exp, source.span(start, lastBoundary))
 
   // --- Common trees ---------------------------------------------------------

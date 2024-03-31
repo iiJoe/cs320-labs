@@ -196,7 +196,7 @@ class TyperTests extends munit.FunSuite:
     shouldPassTypeCheck("""
       let something: Int = let x = 1 { x }
       let main = something
-    """.stripMargin) 
+    """.stripMargin)
   }
 
   test("`visitLambda` should work as intended (3pts)") {
@@ -291,7 +291,7 @@ class TyperTests extends munit.FunSuite:
     assertEquals(result, Type.Record("record", List(Type.Labeled(None, Type.Int)))
     )
   }
-  
+
   test("A wildcard pattern can take any type (3pts)") {
     shouldPassTypeCheck("let main = match 1 { case _ then 2 }")
     shouldPassTypeCheck("let main = match \"hi\" { case _ then 2 }")
@@ -342,7 +342,7 @@ class TyperTests extends munit.FunSuite:
       let overload1: String = f("hello")
       let overload2: Int = f(42)
     """.stripMargin)
-  } 
+  }
 
   test("General test 4 (overloading, bis) (2pts)") {
     shouldPassTypeCheck("""
