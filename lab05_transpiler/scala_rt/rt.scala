@@ -34,7 +34,7 @@ object builtin:
   def fle(a: Float, b: Float): Boolean = a <= b
   def fgt(a: Float, b: Float): Boolean = a > b
   def fge(a: Float, b: Float): Boolean = a >= b
-  
+
 // T is the type in which we want to narrow
 // V is the returned type (option)
 def narrow[T: ClassTag,V](a: Any, someConstructor: T => V, none: V): V =
