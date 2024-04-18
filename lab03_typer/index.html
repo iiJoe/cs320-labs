@@ -37,7 +37,7 @@
 <body class="markdown-body">
 <div id="container">
 <main>
-<p class="updated">Last updated on <time datetime=2024-03-15T16:51:31>Friday, March 15, 2024</time></p>
+<p class="updated">Last updated on <time datetime=2024-03-22T18:24:27>Friday, March 22, 2024</time></p>
 <h1><a href="#lab-03---typer" id="lab-03---typer">Lab 03 - Typer</a></h1>
 <p>In this third, you will implement the typer for the Alpine compiler.</p>
 <h2><a href="#obtaining-the-lab-files" id="obtaining-the-lab-files">Obtaining the lab files</a></h2>
@@ -64,6 +64,7 @@
 <li>move the interpreter tests from <code>archive/test/evaluation</code> back to<code>src/test/scala/alpine/evaluation</code>.</li>
 </ul>
 <p><em>Note:</em> the <code>InterpreterTests.scala</code> contain an old behavior that is not relevant anymore. You can either delete it or pull the new changes from the repository.</p>
+<p><em>Edit:</em> Please copy the <code>symbols/Types.scala</code> from the latest version on the repo. The old labs contain an outdated version of this file.</p>
 <p>Your project directory structure should look like something like this:</p>
 <pre><code class="language-console">alpine/
 ├── archive/                                 &lt;----- YOU CAN DELETE THIS DIRECTORY
@@ -86,16 +87,16 @@
 │   │   │   │   ├── util/                    
 │   │   │   │   │   ├── ...
 │   │   │   ├── Main.scala                   &lt;----- COPY FROM THIS WEEK FILES (replace the current one)
-├── test/
-│   ├── scala/
-│   │   ├── alpine/
-│   │   │   ├── evaluation/                  &lt;----- MOVE BACK FROM ARCHIVE
-│   │   │   │   ├── InterpreterTest.scala
-│   │   │   ├── parsing/                     
-│   │   │   │   ├── ...
-│   │   │   ├── typing/                       &lt;----- COPY FROM THIS WEEK FILES
-│   │   │   │   ├── TyperTest.scala
-│   │   │   ├── util/                        
+│   ├── test/
+│   │   ├── scala/
+│   │   │   ├── alpine/
+│   │   │   │   ├── evaluation/                  &lt;----- MOVE BACK FROM ARCHIVE
+│   │   │   │   │   ├── InterpreterTest.scala
+│   │   │   │   ├── parsing/                     
+│   │   │   │   │   ├── ...
+│   │   │   │   ├── typing/                       &lt;----- COPY FROM THIS WEEK FILES
+│   │   │   │   │   ├── TyperTest.scala
+│   │   │   │   ├── util/                        
 </code></pre>
 <h2><a href="#submit-your-work" id="submit-your-work">Submit your work</a></h2>
 <p>To submit your work, go to this week assignment on Moodle and upload the following file:</p>
@@ -267,15 +268,16 @@ $$</p>
 <p>The type of a conditional is $\tau$ which is a supertype of the type of the <code>then</code> branch and the type of the <code>else</code> branch. The condition must be a <code>Boolean</code>. Generate fresh variables if needed.</p>
 <p>$$
 \frac{
-\Gamma \vdash e_1: \text{Boolean } \quad \Gamma \vdash e_2: \tau_2 \quad \Gamma \vdash  e_3: \tau_3 \quad \Gamma \vdash  \tau &gt;: \tau_2 \quad \Gamma \vdash  \tau &gt;: \tau_3
+\Gamma \vdash e_1: \text{Boolean }, e_2: \tau_2, e_3: \tau_3, \tau &gt;: \tau_2, \tau &gt;: \tau_3
 }{
 \Gamma \vdash \text{if } e_1 \text{ then } e_2 \text{ else } e_3: \tau
 }
 $$</p>
+<p><em>Note</em>: you should consider the trivial case as well. If the two branches have the same type, then there is no need for a fresh variable.</p>
 <h4><a href="#visitlete-astlet" id="visitlete-astlet"><code>visitLet(e: ast.Let)</code></a></h4>
 <p>$$
 \frac{
-\Gamma \vdash e: \tau, ,,\Gamma,x \mapsto e \vdash e_r: \tau_r
+\Gamma \vdash e: \tau, \quad \Gamma,x \mapsto e \vdash e_r: \tau_r
 }{
 \Gamma \vdash \text{let } x: \tau = e ,{ e_r }: \tau_r
 }
@@ -378,7 +380,7 @@ $$</p>
 \Gamma \vdash (\text{fun } f(x_1: \tau_1, \ldots, x_n: \tau_n) \to \tau { e }) : (l_1: x_1: \tau_1, \ldots, l_n: x_n: \tau_n) \to \tau
 }
 $$</p>
-<p>You should get the unchecked type of the function and memoize it. You should then type check the body and it must be a subtype of the output type of the function.</p>
+<p>You should get the unchecked type of the function and memoize it. You should then type check the body and it must be a subtype of the output type of the function using <code>checkInstanceOf</code>.</p>
 <h4><a href="#visitsum" id="visitsum"><code>visitSum</code></a></h4>
 <p>The function is provided, but here is the inference rule:</p>
 <p>$$

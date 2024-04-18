@@ -30,6 +30,8 @@ Then take your current `alpine` project, i.e., where you implemented the interpr
 
 _Note:_ the `InterpreterTests.scala` contain an old behavior that is not relevant anymore. You can either delete it or pull the new changes from the repository.
 
+_Edit:_ Please copy the `symbols/Types.scala` from the latest version on the repo. The old labs contain an outdated version of this file.
+
 Your project directory structure should look like something like this:
 
 ```console
@@ -54,16 +56,16 @@ alpine/
 │   │   │   │   ├── util/                    
 │   │   │   │   │   ├── ...
 │   │   │   ├── Main.scala                   <----- COPY FROM THIS WEEK FILES (replace the current one)
-├── test/
-│   ├── scala/
-│   │   ├── alpine/
-│   │   │   ├── evaluation/                  <----- MOVE BACK FROM ARCHIVE
-│   │   │   │   ├── InterpreterTest.scala
-│   │   │   ├── parsing/                     
-│   │   │   │   ├── ...
-│   │   │   ├── typing/                       <----- COPY FROM THIS WEEK FILES
-│   │   │   │   ├── TyperTest.scala
-│   │   │   ├── util/                        
+│   ├── test/
+│   │   ├── scala/
+│   │   │   ├── alpine/
+│   │   │   │   ├── evaluation/                  <----- MOVE BACK FROM ARCHIVE
+│   │   │   │   │   ├── InterpreterTest.scala
+│   │   │   │   ├── parsing/                     
+│   │   │   │   │   ├── ...
+│   │   │   │   ├── typing/                       <----- COPY FROM THIS WEEK FILES
+│   │   │   │   │   ├── TyperTest.scala
+│   │   │   │   ├── util/                        
 ```
 
 
@@ -310,18 +312,20 @@ The type of a conditional is $\tau$ which is a supertype of the type of the `the
 
 $$
 \frac{
-  \Gamma \vdash e_1: \text{Boolean } \quad \Gamma \vdash e_2: \tau_2 \quad \Gamma \vdash  e_3: \tau_3 \quad \Gamma \vdash  \tau >: \tau_2 \quad \Gamma \vdash  \tau >: \tau_3
+  \Gamma \vdash e_1: \text{Boolean }, e_2: \tau_2, e_3: \tau_3, \tau >: \tau_2, \tau >: \tau_3
 }{
   \Gamma \vdash \text{if } e_1 \text{ then } e_2 \text{ else } e_3: \tau
 }
 $$
+
+_Note_: you should consider the trivial case as well. If the two branches have the same type, then there is no need for a fresh variable.
 
 #### `visitLet(e: ast.Let)`
 
 
 $$
 \frac{
-  \Gamma \vdash e: \tau, \,\,\Gamma,x \mapsto e \vdash e_r: \tau_r
+  \Gamma \vdash e: \tau, \quad \Gamma,x \mapsto e \vdash e_r: \tau_r
 }{
   \Gamma \vdash \text{let } x: \tau = e \,\{ e_r \}: \tau_r
 }
@@ -462,7 +466,7 @@ $$
 }
 $$
 
-You should get the unchecked type of the function and memoize it. You should then type check the body and it must be a subtype of the output type of the function.
+You should get the unchecked type of the function and memoize it. You should then type check the body and it must be a subtype of the output type of the function using `checkInstanceOf`.
 
 #### `visitSum`
 

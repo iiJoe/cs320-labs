@@ -114,39 +114,39 @@ class InterpreterTests extends munit.FunSuite:
 
   // --- Ascribed expressions -------------------------------------------------
 
-  test("Widening should not be an issue (3pts)") {
-    val input = SourceFile("test", "let main = print(#record @ Any)")
-    val Result(s, o) = interpret(input)
-    assertEquals(s, 0)
-  }
+  // test("Widening should not be an issue (3pts)") {
+  //   val input = SourceFile("test", "let main = print(#record @ Any)")
+  //   val Result(s, o) = interpret(input)
+  //   assertEquals(s, 0)
+  // }
 
-  test("Narrowing unconditionally should not be an issue if subtype (3pts)") {
-    val input = SourceFile("test", "let main = print(#record @! #record)")
-    val Result(s, o) = interpret(input)
-    assertEquals(s, 0)
-  }
+  // test("Narrowing unconditionally should not be an issue if subtype (3pts)") {
+  //   val input = SourceFile("test", "let main = print(#record @! #record)")
+  //   val Result(s, o) = interpret(input)
+  //   assertEquals(s, 0)
+  // }
 
-  test("Narrowing unconditionally if not subtype should panic (3pts)") {
-    val input = SourceFile("test", "let main = print((5 @ Any) @! Float)")
-    try
-      val r = interpret(input)
-      assert(false, "Panic expected.")
-    catch case _: alpine.evaluation.Panic => ()
-  }
+  // test("Narrowing unconditionally if not subtype should panic (3pts)") {
+  //   val input = SourceFile("test", "let main = print((5 @ Any) @! Float)")
+  //   try
+  //     val r = interpret(input)
+  //     assert(false, "Panic expected.")
+  //   catch case _: alpine.evaluation.Panic => ()
+  // }
 
-  test("Narrowing conditionally should return a #none if not a subtype (3pts)") {
-    val input = SourceFile("test", "let main = print((5 @ Any) @? Float)")
-    val Result(s, o) = interpret(input)
-    assertEquals(s, 0)
-    assertEquals(o, "#none")
-  }
+  // test("Narrowing conditionally should return a #none if not a subtype (3pts)") {
+  //   val input = SourceFile("test", "let main = print((5 @ Any) @? Float)")
+  //   val Result(s, o) = interpret(input)
+  //   assertEquals(s, 0)
+  //   assertEquals(o, "#none")
+  // }
 
-  test("Narrowing conditionally should return a #some if a subtype (3pts)") {
-    val input = SourceFile("test", "let main = print((1 @ Any) @? Int)")
-    val Result(s, o) = interpret(input)
-    assertEquals(s, 0)
-    assertEquals(o, "#some(1)")
-  }
+  // test("Narrowing conditionally should return a #some if a subtype (3pts)") {
+  //   val input = SourceFile("test", "let main = print((1 @ Any) @? Int)")
+  //   val Result(s, o) = interpret(input)
+  //   assertEquals(s, 0)
+  //   assertEquals(o, "#some(1)")
+  // }
 
   // --- Function calls -------------------------------------------------------
 
@@ -435,53 +435,53 @@ class InterpreterTests extends munit.FunSuite:
     assertEquals(s, 1)
   }
 
-  test("widening (3pts)") {
-    val input = SourceFile("test", "let main = print(#a @ Any)")
-    val Result(s, o) = interpret(input)
-    assertEquals(s, 0)
-    assertEquals(o, "#a")
-  }
+  // test("widening (3pts)") {
+  //   val input = SourceFile("test", "let main = print(#a @ Any)")
+  //   val Result(s, o) = interpret(input)
+  //   assertEquals(s, 0)
+  //   assertEquals(o, "#a")
+  // }
 
-  test("narrowing with success (3pts)") {
-    val input = SourceFile(
-      "test",
-      """let x: Any = #a
-        |let main = print(x @? #a)""".stripMargin)
-    val Result(s, o) = interpret(input)
-    assertEquals(s, 0)
-    assertEquals(o, "#some(#a)")
-  }
+  // test("narrowing with success (3pts)") {
+  //   val input = SourceFile(
+  //     "test",
+  //     """let x: Any = #a
+  //       |let main = print(x @? #a)""".stripMargin)
+  //   val Result(s, o) = interpret(input)
+  //   assertEquals(s, 0)
+  //   assertEquals(o, "#some(#a)")
+  // }
 
-  test("narrowing with failure (3pts)") {
-    val input = SourceFile(
-      "test",
-      """let x: Any = #b
-        |let main = print(x @? #a)""".stripMargin)
-    val Result(s, o) = interpret(input)
-    assertEquals(s, 0)
-    assertEquals(o, "#none")
-  }
+  // test("narrowing with failure (3pts)") {
+  //   val input = SourceFile(
+  //     "test",
+  //     """let x: Any = #b
+  //       |let main = print(x @? #a)""".stripMargin)
+  //   val Result(s, o) = interpret(input)
+  //   assertEquals(s, 0)
+  //   assertEquals(o, "#none")
+  // }
 
-  test("narrowing unconditionally with success (3pts)") {
-    val input = SourceFile(
-      "test",
-      """let x: Any = #a
-        |let main = print(x @! #a)""".stripMargin)
-    val Result(s, o) = interpret(input)
-    assertEquals(s, 0)
-    assertEquals(o, "#a")
-  }
+  // test("narrowing unconditionally with success (3pts)") {
+  //   val input = SourceFile(
+  //     "test",
+  //     """let x: Any = #a
+  //       |let main = print(x @! #a)""".stripMargin)
+  //   val Result(s, o) = interpret(input)
+  //   assertEquals(s, 0)
+  //   assertEquals(o, "#a")
+  // }
 
-  test("narrowing unconditionally with failure (3pts)") {
-    val input = SourceFile(
-      "test",
-      """let x: Any = #b
-        |let main = print(x @! #a)""".stripMargin)
-    try
-      val r = interpret(input)
-      assert(false)
-    catch case _: alpine.evaluation.Panic => ()
-  }
+  // test("narrowing unconditionally with failure (3pts)") {
+  //   val input = SourceFile(
+  //     "test",
+  //     """let x: Any = #b
+  //       |let main = print(x @! #a)""".stripMargin)
+  //   try
+      // val r = interpret(input)
+  //     assert(false)
+  //   catch case _: alpine.evaluation.Panic => ()
+  // }
 
   test("parenthesized (3pts)") {
     val input = SourceFile("test", "let main = exit(((((1)))))")
